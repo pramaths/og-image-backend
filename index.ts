@@ -1,14 +1,11 @@
 import express, { Request, Response } from 'express';
 import sharp from 'sharp';
-import path from 'path';
-import fs from 'fs/promises';
 import axios from 'axios';
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static('public'));
 
 interface OgImageParams {
   title: string;
@@ -73,13 +70,9 @@ app.post('/generate-og-image', async (req: Request, res: Response) => {
 
     const imageBuffer = await generateOgImage({ title, content, imageUrl });
 
-    const fileName = `og-image-${Date.now()}.png`;
-    const filePath = path.join(__dirname, 'public', fileName);
-    
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, imageBuffer);
-
-    res.json({ imageUrl: `/${fileName}` });
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 's-maxage=31536000, public');
+    res.send(imageBuffer);
   } catch (error) {
     console.error('Error generating OG image:', error);
     res.status(500).json({ error: 'Failed to generate OG image' });
@@ -89,3 +82,5 @@ app.post('/generate-og-image', async (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+
+export default app;
