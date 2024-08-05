@@ -24,40 +24,39 @@ async function generateOgImage({ title, content, imageUrl }: OgImageParams): Pro
   const width = 1200;
   const height = 630;
 
+  let background = sharp({
+    create: {
+      width: width,
+      height: height,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    }
+  });
+
+  if (imageUrl) {
+    try {
+      const imageBuffer = await fetchImageBuffer(imageUrl);
+      background = sharp(imageBuffer)
+        .resize(width, height)
+        .flatten({ background: '#fff' });  // Ensures no transparency
+    } catch (error) {
+      console.error('Error processing background image URL:', error);
+    }
+  }
+
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#4338ca;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#grad)"/>
-      <rect x="40" y="40" width="${width - 80}" height="${height - 80}" fill="#ffffff" rx="20" ry="20"/>
-      <text x="60" y="120" font-family="Arial, sans-serif" font-size="50" font-weight="bold" fill="#1f2937">${title}</text>
+      <rect x="40" y="40" width="${width - 80}" height="${height - 80}" fill="rgba(255, 255, 255, 0.85)" rx="20" ry="20"/>
+      <text x="60" y="120" font-family="Arial, sans-serif" font-size="50" font-weight="bold" fill="#1f2937" stroke="#ffffff" stroke-width="1px">${title}</text>
       <text x="60" y="200" font-family="Arial, sans-serif" font-size="30" fill="#4b5563">${content}</text>
       <text x="60" y="${height - 60}" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#3b82f6">Your Brand</text>
     </svg>
   `;
 
-  let image = sharp(Buffer.from(svg));
-
-  if (imageUrl) {
-    try {
-      const imageBuffer = await fetchImageBuffer(imageUrl);
-      const overlay = await sharp(imageBuffer)
-        .resize(300, 300, { fit: 'inside' })
-        .toBuffer();
-
-      image = image.composite([
-        { input: overlay, top: 260, left: 840, gravity: 'southeast' }
-      ]);
-    } catch (error) {
-      console.error('Error processing image URL:', error);
-    }
-  }
-
-  return image
+  const svgBuffer = Buffer.from(svg);
+  
+  return background
+    .composite([{ input: svgBuffer, top: 0, left: 0 }])
     .png()
     .toBuffer();
 }
