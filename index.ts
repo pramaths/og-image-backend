@@ -1,8 +1,10 @@
 import express, { Request, Response } from 'express';
 import sharp from 'sharp';
 import axios from 'axios';
+import cors from 'cors';
 
 const app = express();
+app.use(cors());
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
